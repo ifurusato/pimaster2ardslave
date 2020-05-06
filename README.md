@@ -39,6 +39,35 @@ Please note that the documentation in the code will likely be more current
 than this README file, so please consult it for the "canonical" information.
 
 
+## Installation
+
+The Raspberry Pi will require support for Python 3 and pip3. Additionally, you
+will need to install the [pigpio library](http://abyz.me.uk/rpi/pigpio/), e.g., 
+
+    % sudo pip3 install pigpio 
+
+Once pigpio is installed you can run the test_i2c_master.py and try experimenting
+with various alternative settings.
+
+On the Arduino, install the i2c_slave.ino file via the Arduino IDE (or whatever
+method you generally use to load your Arduino). Once loaded it is ready to receive
+configuration and calls from the Raspberry Pi script. What you want to do with the
+Pi script is rather up to you. You might as a first exercise set the `isEchoTest`
+on the i2c_slave.ino file to true and execute the echo_test() method in I2CMaster.
+
+
+## Support & Liability
+
+This project comes with no promise of support or liability. Use at your own risk.
+
+There are a number of gotchas when connecting a Raspberry Pi (which uses 3.3 volts
+for its logic) and various models of the Arduino board, some that use 5 volt logic,
+some that use 3.3 volts. You can burn out or damage your hardware if you don't do
+it right. It is beyond the scope of this project to help you connect your hardware.
+To remove some of the hazard I recommend one of the 3.3 volt Arduinos, (e.g., the
+Arduino Nano IoT or Nano BLE but **not** the Nano, Micro or Uno).  
+
+
 ## Further Information
 
 This project is part of the New Zealand Personal Robotics (NZPRG) Robot Operating 
