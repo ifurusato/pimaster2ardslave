@@ -31,7 +31,7 @@ from lib.logger import Logger, Level
 
 # ..............................................................................
 
-DEVICE_ID = 0x08  # must match Arduino's SLAVE_I2C_ADDRESS
+DEVICE_ID = 0x1A  # must match Arduino's SLAVE_I2C_ADDRESS
 ECHO_TEST = False # echo communications test
 
 # ..............................................................................
@@ -75,7 +75,7 @@ def main():
         _log = Logger("ard", Level.DEBUG)
         _log.info('configuring...')
 
-        _handle = _pi.i2c_open(1, DEVICE_ID) # open device at address 0x08 on bus 1
+        _handle = _pi.i2c_open(1, DEVICE_ID) # open device at address 0x1A on bus 1
         _log.info('pigpio configured successfully.')
 
         AUTORANGE_ON  = 241
