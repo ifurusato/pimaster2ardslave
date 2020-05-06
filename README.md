@@ -29,9 +29,9 @@ than this README file, so please consult it for the "canonical" information.
 
 ## Further Information
 
-This project is part of the NZPRG Robot Operating System, not to be confused with 
-other "ROS" projects. For more information check out the 
-[https://robots.org.nz/](NZPRG blog) and [https://service.robots.org.nz/wiki/](wiki).
+This project is part of the New Zealand Personal Robotics (NZPRG) Robot Operating 
+System, not to be confused with other "ROS" projects. For more information check out the 
+[NZPRG Blog](https://robots.org.nz/) and [NZPRG Wiki](https://service.robots.org.nz/wiki/).
 
 
 ## Copyright & License
