@@ -26,13 +26,14 @@ def main():
 
     try:
 
-        _device_id = 0x1A  # must match Arduino's SLAVE_I2C_ADDRESS
-        master = I2cMaster(_device_id, Level.INFO)
+        _device_id = 0x08  # must match Arduino's SLAVE_I2C_ADDRESS
+        _master = I2cMaster(_device_id, Level.DEBUG)
+        _master.echo_test()
 
     except KeyboardInterrupt:
         self._log.warning('Ctrl-C caught; exiting...')
     finally:
-        master.close()
+        _master.close()
 
 
 if __name__== "__main__":

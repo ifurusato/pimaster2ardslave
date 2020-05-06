@@ -13,7 +13,7 @@
       modified: 2020-05-07
 
     This configures an Arduino as a slave to a Raspberry Pi master, configured
-    to communicate over I2C on address 0x1A. The Arduino runs this single script,
+    to communicate over I²C on address 0x1A. The Arduino runs this single script,
     the Raspberry Pi a Python script.
 
     The pins of the Arduino can be remotely configured from the Pi as INPUT,
@@ -35,7 +35,7 @@
       2. based on the values read by any of the input pins, adjusts the
          auto-range minimum and maximum values
 
-    The setup() function establishes the I2C communication and configures
+    The setup() function establishes the I²C communication and configures
     two callback functions, one for when the Arduino receives data, and one
     for when it receives a request for data:
 

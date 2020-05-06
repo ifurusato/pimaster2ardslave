@@ -1,6 +1,5 @@
 # Raspberry Pi Master to Arduino Slave (pimaster2ardslave)
 
-
 This configures an Arduino as a slave to a Raspberry Pi master, configured
 to communicate over I²C on address `0x1A`. The Arduino runs this single script,
 the Raspberry Pi a Python script.
@@ -31,13 +30,6 @@ there should be a `requestData()` call to receive the corresponding response.
 Because of this the Arduino should not be receiving calls from more than one 
 master; there is no synchronisation.
 
-This script requires installation of ArduinoQueue by Einar Arnason, see:
-
-* [ArduinoQueue](https://github.com/EinarArnason/ArduinoQueue)
-
-Please note that the documentation in the code will likely be more current
-than this README file, so please consult it for the "canonical" information.
-
 
 ## Installation
 
@@ -54,6 +46,11 @@ method you generally use to load your Arduino). Once loaded it is ready to recei
 configuration and calls from the Raspberry Pi script. What you want to do with the
 Pi script is rather up to you. You might as a first exercise set the `isEchoTest`
 on the i2c_slave.ino file to true and execute the echo_test() method in I2cMaster.
+
+The Arduino script requires installation of ArduinoQueue by Einar Arnason, see:
+
+* [ArduinoQueue](https://github.com/EinarArnason/ArduinoQueue)
+
 
 
 ## Support & Liability
@@ -72,9 +69,14 @@ the Arduino Nano IoT or Nano BLE **but not** the Nano, Micro or Uno).
 
 ## Further Information
 
-This project is part of the New Zealand Personal Robotics (NZPRG) Robot Operating 
-System, not to be confused with other "ROS" projects. For more information check out the 
+This project is part of the _New Zealand Personal Robotics (NZPRG)_ "Robot Operating 
+System", not to be confused with other "ROS" projects. For more information check out the 
 [NZPRG Blog](https://robots.org.nz/) and [NZPRG Wiki](https://service.robots.org.nz/wiki/).
+
+Please note that the documentation in the code will likely be more current than this 
+README file, so please consult it for the "canonical" information. Also note that this
+project will eventually be folded into the NZPRG Robot Operating System project, once
+it has gotten to a stage where it can be posted publicly.
 
 
 ## Copyright & License

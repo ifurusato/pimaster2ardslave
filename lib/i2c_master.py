@@ -31,12 +31,13 @@ class I2cMaster():
     '''
     def __init__(self, device_id, level):
         super().__init__()
-        self._log = Logger('master', level)
-        self._log.debug('initialising I²C master...')
+        self._log = Logger('i²cmaster-0x{:02x}'.format(device_id), level)
+        self._device_id = device_id
+        self._log.debug('initialising to communicate over I²C address 0x{:02X}...'.format(device_id))
         try:
             import pigpio
             self._pi = pigpio.pi()
-            self._log.info('imported pigpio.')
+            self._log.debug('imported pigpio.')
         except ImportError as ie:
             self._log.error('failed to import pigpio: {}. You may need to install it via:\n\n  % sudo pip3 install pigpio\n'.format(ie))
             sys.exit(1)
@@ -44,9 +45,10 @@ class I2cMaster():
             self._log.error('failed to instantiate pi: {}'.format(ie))
             sys.exit(2)
         self._handle = self._pi.i2c_open(1, device_id) # open device at address 0x1A on bus 1
-        self._log.info('pigpio configured successfully for I²C device at address {}.'.format(device_id))
+        self._log.debug('pigpio configured successfully for I²C device at address 0x{:02X} with handle {:d}.'.format(device_id, self._handle))
         self._counter = itertools.count()
         self._loop_count = 0  # currently only used in testing
+        self._closed = False
         self._log.info('ready.')
 
 
@@ -60,19 +62,19 @@ class I2cMaster():
         high_byte = byte_array[1]
         _data = low_byte
         _data += ( high_byte << 8 )
-        self._log.info('read_i2c_data     :' + Fore.CYAN + ' DEBUG : ' + Fore.BLUE + 'read {:d} bytes: hi: {:08b};\t lo: {:08b};\t read data: {}'.format(byte_count, high_byte, low_byte, _data) + Style.RESET_ALL)
+        self._log.debug(Fore.BLUE + 'read {:d} bytes: hi: {:08b};\t lo: {:08b};\t read data: {}'.format(byte_count, high_byte, low_byte, _data))
         return _data
 
 
     # ..........................................................................
-    def write_i2c_data(data):
+    def write_i2c_data(self, data):
         '''
             Write an int as two bytes (LSB, MSB) to the I²C device at the specified handle.
         '''
         byteArray = [ data, ( data >> 8 ) ]
         self._pi.i2c_write_byte(self._handle, byteArray[0])
         self._pi.i2c_write_byte(self._handle, byteArray[1])
-        self._log.info('write_i2c_data    :' + Fore.CYAN + ' DEBUG : ' + Fore.BLACK + 'hi: {:08b};\t lo: {:08b};\t sent data: {}'.format(byteArray[1], byteArray[0], data) + Style.RESET_ALL)
+        self._log.debug(Fore.BLACK + 'sent 2 bytes: hi: {:08b};\t lo: {:08b};\t sent data: {}'.format(byteArray[1], byteArray[0], data))
 
 
     # ..........................................................................
@@ -80,8 +82,16 @@ class I2cMaster():
         '''
            Close the I²C device at the specified handle.
         '''
-        self._pi.i2c_close(self._handle) # close device
-        self._log.info('I²C device closed.')
+        self._log.debug('closing I²C device at handle {}...'.format(self._handle))
+        if not self._closed:
+            try:
+                self._closed = True
+                self._pi.i2c_close(self._handle) # close device
+                self._log.debug('I²C device at handle {} closed.'.format(self._handle))
+            except Exception as e:
+                self._log.error('error closing master: {}'.format(e))
+        else:
+            self._log.debug('I²C device at handle {} closed.'.format(self._handle))
 
 
     # ..........................................................................
@@ -98,16 +108,16 @@ class I2cMaster():
                 data_to_send = _data[i]
                 self.write_i2c_data(data_to_send)
                 received_data = self.read_i2c_data()
-        #       assert data_to_send == received_data
+                if data_to_send != received_data:
+                    self._log.warning('echo failed: {} != {}'.format(data_to_send, received_data))
+                else:
+                    self._log.info('echo okay: {} == {}'.format(data_to_send, received_data))
 
             self._pi.i2c_close(self._handle) # close device
-            self._log.info('echo test complete; exiting.')
+            self._log.info('echo test complete.')
         except Exception as e:
             self._log.error('error in echo test: {}'.format(e))
             traceback.print_exc(file=sys.stdout)
-            sys.exit(1)
-        finally:
-            sys.exit(0)
 
 
     # ..........................................................................
@@ -199,18 +209,14 @@ class I2cMaster():
         #       time.sleep(0.25)
                 time.sleep(2.0)
     
-                # TEMP
-                self.close()
-                sys.exit(1)
-    
-            self.close()
-            self._log.info('complete.')
-    
         except KeyboardInterrupt:
             self._log.warning('Ctrl-C caught; exiting...')
         except Exception as e:
             self._log.error('error in master: {}'.format(e))
             traceback.print_exc(file=sys.stdout)
+#       finally:
+#           self.close()
+#           self._log.info('complete.')
 
 
 #EOF
