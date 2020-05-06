@@ -2,7 +2,7 @@
 
 
 This configures an Arduino as a slave to a Raspberry Pi master, configured
-to communicate over I2C on address `0x1A`. The Arduino runs this single script,
+to communicate over I²C on address `0x1A`. The Arduino runs this single script,
 the Raspberry Pi a Python script.
 
 The pins of the Arduino can be remotely configured from the Pi as `INPUT`,
@@ -19,7 +19,7 @@ On each call, the `loop()` function performs two steps:
 1. reads the set of assigned pins. For each assigned pin this updates the array of values, either by reading the corresponding input pin and assigning its value to the array entry for that pin; or for pins assigned as output pins, it takes the array entry for that pin and writes the value to the corresponding output pin
 2. based on the values read by any of the input pins, adjusts the auto-range minimum and maximum values
 
-The `setup()` function establishes the I2C communication and configures
+The `setup()` function establishes the I²C communication and configures
 two callback functions, one for when the Arduino receives data, and one
 for when it receives a request for data:
 
@@ -53,19 +53,21 @@ On the Arduino, install the i2c_slave.ino file via the Arduino IDE (or whatever
 method you generally use to load your Arduino). Once loaded it is ready to receive
 configuration and calls from the Raspberry Pi script. What you want to do with the
 Pi script is rather up to you. You might as a first exercise set the `isEchoTest`
-on the i2c_slave.ino file to true and execute the echo_test() method in I2CMaster.
+on the i2c_slave.ino file to true and execute the echo_test() method in I2cMaster.
 
 
 ## Support & Liability
 
 This project comes with no promise of support or liability. Use at your own risk.
 
-There are a number of gotchas when connecting a Raspberry Pi (which uses 3.3 volts
-for its logic) and various models of the Arduino board, some that use 5 volt logic,
-some that use 3.3 volts. You can burn out or damage your hardware if you don't do
-it right. It is beyond the scope of this project to help you connect your hardware.
-To remove some of the hazard I recommend one of the 3.3 volt Arduinos, (e.g., the
-Arduino Nano IoT or Nano BLE but **not** the Nano, Micro or Uno).  
+There are a number of gotchas when using I²C to connect a Raspberry Pi (which uses
+3.3 volts for its logic) and various models of the Arduino board, some that use 
+5 volt logic, some that use 3.3 volts. You can burn out or damage your hardware if 
+you don't do it right. It is beyond the scope of this project to help you connect 
+your hardware.
+
+To remove some of the hazard I highly recommend one of the 3.3 volt Arduinos, (e.g.,
+the Arduino Nano IoT or Nano BLE **but not** the Nano, Micro or Uno).  
 
 
 ## Further Information
