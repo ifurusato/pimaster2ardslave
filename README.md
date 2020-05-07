@@ -33,10 +33,10 @@ master; there is no synchronisation.
 
 ## Status
 
-At the time of this writing this project is less than a week old and it is not
-yet entirely functional (communication works but the master-slave "API" is not 
-yet finished). It's being exposed publicly so that those interested can follow 
-its progress. When things begin to work we'll update this status section.
+At the time of this writing the project is less than a week old, and is not yet 
+entirely functional (communication works but the master-slave "API" is not finished). 
+The project is being exposed publicly so that those interested can follow its 
+progress. When things stabilise we'll update this status section.
 
 
 ## Installation
