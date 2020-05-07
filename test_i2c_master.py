@@ -14,10 +14,6 @@
 #   % sudo pip3 install pigpio
 #
 
-import sys, time, traceback, itertools
-from colorama import init, Fore, Style
-init()
-
 from lib.logger import Level
 from lib.i2c_master import I2cMaster
 
@@ -27,14 +23,20 @@ def main():
     try:
 
         _device_id = 0x08  # must match Arduino's SLAVE_I2C_ADDRESS
-        _master = I2cMaster(_device_id, Level.DEBUG)
-        _master.testConfiguration()
-#       _master.echo_test()
+        _master = I2cMaster(_device_id, Level.INFO)
+
+        if _master is not None: 
+#           _master.test_echo() # requires 'isEchoTest' on Arduino to be set true
+#           _master.test_blink_led() # see documentation for hardware configuration
+            _master.test_configuration() # see documentation for hardware configuration
+        else:
+            raise Exception('unable to establish contact with Arduino on address 0x{:02X}'.format(_device_id))
 
     except KeyboardInterrupt:
         self._log.warning('Ctrl-C caught; exiting...')
     finally:
-        _master.close()
+        if _master:
+            _master.close()
 
 
 if __name__== "__main__":

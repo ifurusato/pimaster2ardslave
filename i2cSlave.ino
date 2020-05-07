@@ -13,7 +13,7 @@
       modified: 2020-05-07
 
     This configures an Arduino as a slave to a Raspberry Pi master, configured
-    to communicate over I²C on address 0x1A. The Arduino runs this single script,
+    to communicate over I²C on address 0x08. The Arduino runs this single script,
     the Raspberry Pi a Python script.
 
     The pins of the Arduino can be remotely configured from the Pi as INPUT,
@@ -56,7 +56,7 @@
     see: https://github.com/EinarArnason/ArduinoQueue
 */
 
-#define SLAVE_I2C_ADDRESS   0x1A
+#define SLAVE_I2C_ADDRESS   0x08
 #define LOOP_DELAY_MS       1000
 
 // errors ........................................
@@ -75,11 +75,11 @@ const int PIN_INPUT_ANALOG         = 5;
 const int PIN_UNUSED               = 6;
 
 // constants .....................................
-int pinsAssigned = 9;                    // we support up to 32 IO pins (D0-D31, A0-A31)
+int pinsAssigned = 10;                   // we support up to 32 IO pins (D0-D31, A0-A31)
 
 // flags/configuration ...........................
-boolean isVerbose = true;                // write to serial console if true
-boolean isEchoTest = true;               // test: just echo input to output
+boolean isVerbose = true;                // write verbose messages to serial console if true
+boolean isEchoTest = false;              // test: when true just echo input to output
 boolean autoRange  = false;              // if true automatically adjust range
 float irAnalogMinDefault = 70.0;
 float irAnalogMin  = irAnalogMinDefault; // the minimum expected value from the analog IR sensor (28 observed)
@@ -91,19 +91,14 @@ int pinButton      = 6;                  // the pin where we connect the button
 int pinIrDigital   = 7;                  // the pin where we connect the digital IR sensor
 int pinIrAnalog    = 8;                  // the pin where we connect the analog IR sensor
 
-// output states/values ..........................
-int stateButton    = 0;
-int stateDigitalIr = 0;
-int valueAnalogIr  = 0;
-int loopCount      = 0;
-
 // variables .....................................
 ArduinoQueue<byte> inputQueue(2);
 ArduinoQueue<byte> outputQueue(2);
 char buf[100];
-long loop_count = 0;
 int pinAssignments[32] = {}; // how the pin is assigned
 int pinValues[32] = {};      // the value of the pin (if it's an input pin)
+long loopCount      = 0; // number of times loop() has been called
+long requestCount   = 0; // number of times request has been called (actually, when queue is emptied)
 
 // functions ...................................................................
 
@@ -111,23 +106,16 @@ int pinValues[32] = {};      // the value of the pin (if it's an input pin)
     Required setup function.
 */
 void setup() {
-
     resetPinAssignments();
     resetPinValues();
 
     Wire.begin(SLAVE_I2C_ADDRESS);
     Wire.onReceive(receiveData);
     Wire.onRequest(requestData);
-    ready_blink();
 
+    ready_blink();
     sprintf(buf, "ready.");
     Serial.println(buf);
-
-    // manual assignments (for now)
-    // setPinAssignment(pinLED, PIN_OUTPUT);              // set the LED pin as OUTPUT
-    // setPinAssignment(pinButton, PIN_INPUT_DIGITAL);    // set the button pin as INPUT_PULLUP
-    // setPinAssignment(pinIrDigital, PIN_INPUT_DIGITAL); // set the IR digital pin as INPUT_PULLUP
-    // setPinAssignment(pinIrAnalog, PIN_INPUT_ANALOG);   // set the IR analog pin as INPUT
 }
 
 /**
@@ -136,10 +124,10 @@ void setup() {
 void loop() {
     readPinAssignments();
     if ( isVerbose ) {
-        displayPinAssignments();
+        // displayPinAssignments();
     }
     delay(LOOP_DELAY_MS);
-    loop_count++;
+    loopCount += 1;
 }
 
 /**
@@ -169,6 +157,7 @@ void receiveData(int byteCount) {
         outputQueue.enqueue(b);
     }
     if ( inputQueue.item_count() == 2 ) { // cache is full so prepare output data
+        requestCount += 1;
         byte loByte = inputQueue.dequeue();
         byte hiByte = inputQueue.dequeue();
         int inputData = loByte | ( hiByte << 8 );
@@ -190,7 +179,7 @@ void receiveData(int byteCount) {
 */
 void readPinAssignments() {
     if ( isVerbose ) {
-        sprintf(buf, "\n[%05ld] read assignments for %2d pins...", loop_count, pinsAssigned );
+        sprintf(buf, "\n[%05ld] read assignments for %2d pins...", loopCount, pinsAssigned );
         Serial.println(buf);
     }
     for ( int pin = 0; pin < pinsAssigned; pin++ ) {
@@ -231,7 +220,7 @@ void readPinAssignments() {
     Display the configured types for each pin.
 */
 void displayPinAssignments() {
-    sprintf(buf, "\n[%05ld] display pin assignments...", loop_count);
+    sprintf(buf, "\n[%05ld] display pin assignments...", loopCount);
     Serial.println(buf);
     for ( int pin = 0; pin < pinsAssigned; pin++ ) {
         int pinType = pinAssignments[pin];
@@ -265,11 +254,15 @@ void displayPinAssignments() {
       0-31:       return the output data for that pin assignment, -1 if the pin is not assigned
       32-63:      set the pin (n-32) as an INPUT pin, return pin number
       64-95:      set the pin (n-64) as an INPUT_PULLUP pin, return pin number
-      96-127:     set the pin (n-96) as an OUTPUT pin, return pin number
-      128-159:    write output for pin (n-128) to LOW, return 0
-      160-191:    write output for pin (n-160) to HIGH, return 1
-      192-223:    echo input
-      224:        return loop count
+      96-127:     set the pin (n-96) as an INPUT_ANALOG pin, return pin number
+      128-159:    set the pin (n-128) as an OUTPUT pin, return pin number
+      160-191:    write output for pin (n-160) to LOW, return 0
+      192-223:    write output for pin (n-192) to HIGH, return 1
+      224:        echo input
+      225:        set request count to zero
+      226:        return request count
+      227:        set loop count to zero
+      228:        return loop count
       229:        clear queues, return 0
       230:        return IR analog minimum range
       231:        return IR analog maximum range
@@ -280,29 +273,41 @@ void displayPinAssignments() {
 int handleCommand( int data ) {
     if ( data >= 0 && data < 32 ) { //           0-31:     return the output data for that pin assignment, -1 if the pin is not assigned
         return getOutputData(data);
-    } else if ( inRange(data, 32, 64) ) { //     32-63:    set the pin (n-32) as an INPUT pin, return pin number
+    } else if ( inRange(data, 32, 64) ) { //     32-63:    set the pin (n-32) as an PIN_INPUT_DIGITAL pin, return pin number
         int pin = data - 32;
         setPinAssignment(pin, PIN_INPUT_DIGITAL);
         return pin;
-    } else if ( inRange(data, 64, 96) ) { //     64-95:    set the pin (n-64) as an INPUT_PULLUP pin, return pin number
+    } else if ( inRange(data, 64, 96) ) { //     64-95:    set the pin (n-64) as an PIN_INPUT_DIGITAL_PULLUP pin, return pin number
         int pin = data - 64;
         setPinAssignment(pin, PIN_INPUT_DIGITAL_PULLUP);
         return pin;
-    } else if ( inRange(data, 96, 127)  ) { //   96-127:   set the pin (n-96) as an OUTPUT pin, return pin number
+    } else if ( inRange(data, 96, 128) ) { //    64-95:    set the pin (n-64) as an PIN_INPUT_ANALOG pin, return pin number
         int pin = data - 96;
+        setPinAssignment(pin, PIN_INPUT_ANALOG);
+        return pin;
+    } else if ( inRange(data, 128, 160)  ) { //  128-159:  set the pin (n-96) as an OUTPUT pin, return pin number
+        int pin = data - 128;
         setPinAssignment(pin, PIN_OUTPUT);
         return pin;
-    } else if ( inRange(data, 128, 160) ) { //   128-159:  write output for pin (n-128) to LOW, return 0
-        int pin = data - 128;
+    } else if ( inRange(data, 160, 192) ) { //   160-191:  write output for pin (n-160) to LOW, return 0
+        int pin = data - 160;
         digitalWrite(pin, LOW);
         return 0;
-    } else if ( inRange(data, 160, 192) ) { //   160-191:  write output for pin (n-160) to HIGH, return 1
-        int pin = data - 160;
+    } else if ( inRange(data, 192, 224) ) { //   192-223:  write output for pin (n-192) to HIGH, return 1
+        int pin = data - 192;
         digitalWrite(pin, HIGH);
         return 1;
-    } else if ( inRange(data, 192, 224) ) { //   192-223:   echo input
+    } else if ( data == 224 ) { //               224:      echo input
         return data;
-    } else if ( data ==  224 ) { //              224:      return loop count
+    } else if ( data ==  225 ) { //              225:      zero request count, return 0
+        requestCount = 0;
+        return requestCount;
+    } else if ( data ==  226 ) { //              226:      return request count
+        return requestCount;
+    } else if ( data ==  227 ) { //              227:      zero loop count, return 0
+        loopCount = 0;
+        return loopCount;
+    } else if ( data ==  228 ) { //              228:      return loop count
         return loopCount;
     } else if ( data == 229 ) { //               229:      clear queues, return 0
         clearInputQueue();
@@ -382,9 +387,6 @@ void setPinAssignment(int pin, int assignment) {
     Sets the pin assignments for all to -1 (unused).
 */
 void resetPinAssignments() {
-    if ( isVerbose ) {
-        Serial.println("resetPinAssignments ----------------------- ");
-    }
     for ( int i = 0; i < pinsAssigned; i++ ) {
         pinAssignments[i] = PIN_UNUSED;
     }
@@ -394,9 +396,6 @@ void resetPinAssignments() {
     Sets the pin state values for all to -2 (error value).
 */
 void resetPinValues() {
-    if ( isVerbose ) {
-        Serial.println("resetPinValues ----------------------- ");
-    }
     for ( int i = 0; i < pinsAssigned; i++ ) {
         pinValues[i] = INIT_VALUE;
     }
@@ -415,9 +414,6 @@ void queueForOutput( int data ) {
     Clears the contents of the input queue.
 */
 void clearInputQueue() {
-    //    char data[64];
-    //    sprintf(data, "TX: inputQueue: %d items; outputQueue: %d items.", inputQueue.item_count(), outputQueue.item_count());
-    Serial.println("clearInputQueue() -------------------- ");
     while ( !inputQueue.isEmpty() ) {
         inputQueue.dequeue();
     }
@@ -427,7 +423,6 @@ void clearInputQueue() {
     Clears the contents of the output queue.
 */
 void clearOutputQueue() {
-    Serial.println("clearOutputQueue() -------------------- ");
     while ( !outputQueue.isEmpty() ) {
         outputQueue.dequeue();
     }
@@ -483,7 +478,7 @@ boolean inRange(int value, int minimum, int maximum) {
     A distinctive blink pattern indicating the Arduino is ready.
 */
 void ready_blink() {
-    for ( int i = 50; i > 0; i -= 5 )  {
+    for ( int i = 67; i > 0; i -= 5 )  {
         digitalWrite(LED_BUILTIN_TX, HIGH);
         delay(i);
         digitalWrite(LED_BUILTIN_TX, LOW);
@@ -495,7 +490,7 @@ void ready_blink() {
     }
     digitalWrite(LED_BUILTIN_TX, HIGH);
     digitalWrite(LED_BUILTIN_RX, HIGH);
-    delay(500);
+    delay(667);
     digitalWrite(LED_BUILTIN_TX, LOW);
     digitalWrite(LED_BUILTIN_RX, LOW);
 }

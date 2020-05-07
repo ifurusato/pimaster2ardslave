@@ -6,6 +6,8 @@ sketch, the Raspberry Pi a Python script.
 
 ![Raspberry Pi to Arduino aboard a robot](https://service.robots.org.nz/wiki/attach/RaspberryPiToArduinoOverI2C/pimaster2ardslave-0542-550x504.jpg)
 
+_The above image shows an Arduino Micro connected to a Raspberry Pi using Pimoroni's Breakout Garden._
+
 The pins of the Arduino can be remotely configured from the Pi as `INPUT`,
 `INPUT_PULLUP`, or `OUTPUT` (on an Arduino pins are set `INPUT` by default).
 
@@ -36,9 +38,18 @@ master; there is no synchronisation.
 ## Status
 
 At the time of this writing the project is less than a week old, and is not yet 
-entirely functional (communication works but the master-slave "API" is not finished). 
+entirely functional, but the basic communication works. The test class includes
+three tests (test_echo, test_blink_led and test_configuration) that function
+and interact with hardware in expected ways.
+
 The project is being exposed publicly so that those interested can follow its 
 progress. When things stabilise we'll update this status section.
+
+
+## Quick Start
+
+Try out the various tests, which will interact with hardware. More to come on
+this subject...
 
 
 ## Installation
