@@ -28,7 +28,8 @@ def main():
 
         _device_id = 0x08  # must match Arduino's SLAVE_I2C_ADDRESS
         _master = I2cMaster(_device_id, Level.DEBUG)
-        _master.echo_test()
+        _master.testConfiguration()
+#       _master.echo_test()
 
     except KeyboardInterrupt:
         self._log.warning('Ctrl-C caught; exiting...')

@@ -80,13 +80,15 @@ class I2cMaster():
     # ..........................................................................
     def close(self):
         '''
-           Close the I²C device at the specified handle.
+            Doesn't close the I²C device (which isn't necessary) but rather discards the
+            existing handle so that the instance of the class can no longer be used.
         '''
         self._log.debug('closing I²C device at handle {}...'.format(self._handle))
         if not self._closed:
             try:
                 self._closed = True
-                self._pi.i2c_close(self._handle) # close device
+#               self._pi.i2c_close(self._handle) # close device
+                self._handle = None
                 self._log.debug('I²C device at handle {} closed.'.format(self._handle))
             except Exception as e:
                 self._log.error('error closing master: {}'.format(e))
@@ -121,7 +123,38 @@ class I2cMaster():
 
 
     # ..........................................................................
-    def test(self):
+    def configurePinInput(self, pin):
+        '''
+            Equivalent to calling pinMode(pin, INPUT);
+            which sets the pin as a digital input pin.
+        '''
+        returned_value = self.write_i2c_data(pin + 32)
+        self._log.info('configurePinInput' + Fore.CYAN + Style.BRIGHT + '; returned: {:02d}'.format(returned_value))
+
+
+    # ..........................................................................
+    def configurePinInputPullup(self, pin):
+        '''
+            Equivalent to calling pinMode(pin, INPUT_PULLUP);
+            which sets the pin as a digital input pin with a
+            built-in pullup resister.
+        '''
+        returned_value = self.write_i2c_data(pin + 64)
+        self._log.info('configurePinInputPullup' + Fore.CYAN + Style.BRIGHT + '; returned: {:02d}'.format(returned_value))
+
+
+    # ..........................................................................
+    def configurePinOutput(self, pin):
+        '''
+            Equivalent to calling pinMode(pin, OUTPUT);
+            which sets the pin as an output pin.
+        '''
+        returned_value = self.write_i2c_data(pin + 96)
+        self._log.info('configurePinOutput' + Fore.CYAN + Style.BRIGHT + '; returned: {:02d}'.format(returned_value))
+
+
+    # ..........................................................................
+    def testConfiguration(self):
         try:
     
             AUTORANGE_DISABLE = 232
@@ -129,13 +162,22 @@ class I2cMaster():
     
             # configure some pins...
             # pinMode(7, INPUT);  // set the IR digital pin as INPUT
-            self.write_i2c_data(7+32)
+#           self.write_i2c_data(7+32)
+            self.configurePinInput(7)
+
             # pinMode(8, INPUT);  // set the IR analog pin as INPUT
-            self.write_i2c_data(8+32)
+#           self.write_i2c_data(8+32)
+            self.configurePinInput(8)
+
             # pinMode(6, INPUT);  // set the button pin as INPUT_PULLUP
-            self.write_i2c_data(6+64)
+#           self.write_i2c_data(6+64)
+            self.configurePinInputPullup(6)
+
             # pinMode(5, OUTPUT);    // set the LED pin as OUTPUT
-            self.write_i2c_data(5+96)
+#           self.write_i2c_data(5+96)
+            self.configurePinOutput(5)
+
+            sys.exit(3)
     
         #   data_array = [ 0, 1, 2, 5, 6, 7, 8, 192, 201, 223, 224, 230, 231, 254, 255 ]
             data_array = [ 0, 1, 2, 5, 6, 7, 8, 192, 201, 223 ]

@@ -31,6 +31,14 @@ Because of this the Arduino should not be receiving calls from more than one
 master; there is no synchronisation.
 
 
+## Status
+
+At the time of this writing this project is less than a week old and it is not
+yet entirely functional (communication works but the master-slave "API" is not 
+yet finished). It's being exposed publicly so that those interested can follow 
+its progress. When things begin to work we'll update this status section.
+
+
 ## Installation
 
 The Raspberry Pi will require support for Python 3 and pip3. Additionally, you
@@ -42,10 +50,11 @@ Once pigpio is installed you can run the test_i2c_master.py and try experimentin
 with various alternative settings.
 
 On the Arduino, install the i2c_slave.ino file via the Arduino IDE (or whatever
-method you generally use to load your Arduino). Once loaded it is ready to receive
-configuration and calls from the Raspberry Pi script. What you want to do with the
-Pi script is rather up to you. You might as a first exercise set the `isEchoTest`
-on the i2c_slave.ino file to true and execute the echo_test() method in I2cMaster.
+method you generally use to upload scripts to your Arduino). Once the script is 
+loaded the Arduino is ready to receive configuration and calls from the Raspberry 
+Pi. What you want to do with the Pi script is rather up to you. As a first exercise
+you might set the `isEchoTest` boolean value in the i2c_slave.ino file to true and 
+execute the echo_test() method in I2cMaster.
 
 The Arduino script requires installation of ArduinoQueue by Einar Arnason, see:
 
