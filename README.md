@@ -4,6 +4,8 @@ This configures an Arduino as a slave to a Raspberry Pi master, configured
 to communicate over I²C on address `0x1A`. The Arduino runs the provided 
 sketch, the Raspberry Pi a Python script.
 
+![Raspberry Pi to Arduino aboard a robot](https://service.robots.org.nz/wiki/attach/RaspberryPiToArduinoOverI2C/pimaster2ardslave-0542-550x504.jpg)
+
 The pins of the Arduino can be remotely configured from the Pi as `INPUT`,
 `INPUT_PULLUP`, or `OUTPUT` (on an Arduino pins are set `INPUT` by default).
 
