@@ -1,16 +1,16 @@
 # Raspberry Pi Master to Arduino Slave (pimaster2ardslave)
 
 This configures an Arduino as a slave to a Raspberry Pi master, configured
-to communicate over I²C on address `0x1A`. The Arduino runs this single script,
-the Raspberry Pi a Python script.
+to communicate over I²C on address `0x1A`. The Arduino runs the provided 
+sketch, the Raspberry Pi a Python script.
 
 The pins of the Arduino can be remotely configured from the Pi as `INPUT`,
 `INPUT_PULLUP`, or `OUTPUT` (on an Arduino pins are set `INPUT` by default).
 
 Once configured, the value of input pins can be read from using a two byte 
 key as a command; pins configured as output pins can likewise be set via 
-command. In the returned data the high order byte is always `0x00`, so this 
-script reacts to keys from 0 to 255. The specifics of these keys is 
+command. In the returned data the high order byte is always `0x00`, so the 
+sketch reacts to keys from 0 to 255. The specifics of these keys is 
 documented below.
 
 On each call, the `loop()` function performs two steps:
@@ -50,13 +50,13 @@ Once pigpio is installed you can run the test_i2c_master.py and try experimentin
 with various alternative settings.
 
 On the Arduino, install the i2c_slave.ino file via the Arduino IDE (or whatever
-method you generally use to upload scripts to your Arduino). Once the script is 
+method you generally use to upload sketches to your Arduino). Once the sketch is 
 loaded the Arduino is ready to receive configuration and calls from the Raspberry 
 Pi. What you want to do with the Pi script is rather up to you. As a first exercise
 you might set the `isEchoTest` boolean value in the i2c_slave.ino file to true and 
 execute the echo_test() method in I2cMaster.
 
-The Arduino script requires installation of ArduinoQueue by Einar Arnason, see:
+The Arduino sketch requires installation of ArduinoQueue by Einar Arnason, see:
 
 * [ArduinoQueue](https://github.com/EinarArnason/ArduinoQueue)
 
