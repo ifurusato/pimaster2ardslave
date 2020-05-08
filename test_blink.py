@@ -9,7 +9,14 @@
 # created:  2020-04-30
 # modified: 2020-05-04
 #
-# This requires installation of pigpio, e.g.:
+# This test blinks an LED connected to pin 5 of the Arduino. This requires 
+# a Raspberry Pi connected to an Arduino over I²C on address 0x08. Because
+# an LED cannot directly handle a 5 volt supply you should connect the LED
+# to ground through a resistor of about 330 ohms. The exact value will
+# depend on the dropping voltage of the LED (which varies) and how bright
+# you want it to appear.
+#
+# This also requires installation of pigpio, e.g.:
 #
 #   % sudo pip3 install pigpio
 #
@@ -24,11 +31,10 @@ def main():
 
         _device_id = 0x08  # must match Arduino's SLAVE_I2C_ADDRESS
         _master = I2cMaster(_device_id, Level.INFO)
-
         if _master is not None: 
-#           _master.test_echo() # requires 'isEchoTest' on Arduino to be set true
-#           _master.test_blink_led() # see documentation for hardware configuration
-            _master.test_configuration() # see documentation for hardware configuration
+
+            _master.test_blink_led(7) # see documentation for hardware configuration
+
         else:
             raise Exception('unable to establish contact with Arduino on address 0x{:02X}'.format(_device_id))
 

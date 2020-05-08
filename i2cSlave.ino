@@ -10,7 +10,7 @@
 
       author:   Murray Altheim
       created:  2020-04-30
-      modified: 2020-05-07
+      modified: 2020-05-08
 
     This configures an Arduino as a slave to a Raspberry Pi master, configured
     to communicate over I²C on address 0x08. The Arduino runs this single script,
@@ -56,16 +56,18 @@
     see: https://github.com/EinarArnason/ArduinoQueue
 */
 
-#define SLAVE_I2C_ADDRESS   0x08
-#define LOOP_DELAY_MS       1000
+#define SLAVE_I2C_ADDRESS         0x08
+#define LOOP_DELAY_MS             1000
 
 // errors ........................................
-#define UNRECOGNISED_COMMAND 255         // returned on communications error
-#define TOO_MUCH_DATA        254         // returned on communications error
-#define PIN_ASSIGNED_INPUT   253         // returned on communications error
-#define EMPTY_QUEUE          252         // returned on error
-#define ERROR_VALUE          251         // returned on error
-#define INIT_VALUE             0         // returned on error
+#define UNDEFINED_ERROR            255   // returned on error
+#define UNRECOGNISED_COMMAND       254   // returned on communications error
+#define TOO_MUCH_DATA              253   // returned on communications error
+#define PIN_ASSIGNED_AS_INPUT      252   // configuration error
+#define PIN_ASSIGNED_AS_OUTPUT     251   // configuration error
+#define PIN_UNASSIGNED             250   // configuration error
+#define EMPTY_QUEUE                249   // returned on error
+#define INIT_VALUE                   0   // initial pin value; may be error
 
 // pin types .....................................
 const int PIN_INPUT_DIGITAL        = 2;  // default
@@ -74,31 +76,39 @@ const int PIN_INPUT_DIGITAL_PULLUP = 4;  // inverted: low(0) is on
 const int PIN_INPUT_ANALOG         = 5;
 const int PIN_UNUSED               = 6;
 
+// commands ......................................
+const int CMD_ECHO_INPUT           = 224;
+const int CMD_CLEAR_REQUEST_COUNT  = 225;
+const int CMD_RETURN_REQUEST_COUNT = 226;
+const int CMD_CLEAR_LOOP_COUNT     = 227;
+const int CMD_RETURN_LOOP_COUNT    = 228;
+const int CMD_CLEAR_QUEUES         = 229;
+const int CMD_RETURN_ANALOG_MIN_RANGE = 230;
+const int CMD_RETURN_ANALOG_MAX_RANGE = 231;
+const int CMD_DISABLE_AUTORANGE    = 232;
+const int CMD_ENABLE_AUTORANGE     = 233;
+
 // constants .....................................
 int pinsAssigned = 10;                   // we support up to 32 IO pins (D0-D31, A0-A31)
 
 // flags/configuration ...........................
 boolean isVerbose = true;                // write verbose messages to serial console if true
-boolean isEchoTest = false;              // test: when true just echo input to output
-boolean autoRange  = false;              // if true automatically adjust range
-float irAnalogMinDefault = 70.0;
-float irAnalogMin  = irAnalogMinDefault; // the minimum expected value from the analog IR sensor (28 observed)
-float irAnalogMaxDefault = 600.0;
-float irAnalogMax  = irAnalogMaxDefault; // the maximum expected value from the analog IR sensor (685 observed)
-
-int pinLED         = 5;                  // the pin we connect the LED
-int pinButton      = 6;                  // the pin where we connect the button
-int pinIrDigital   = 7;                  // the pin where we connect the digital IR sensor
-int pinIrAnalog    = 8;                  // the pin where we connect the analog IR sensor
+boolean isEchoTest = false;              // test: when true just echo input to output (default false)
+boolean isAutoRange  = false;            // if true automatically adjust range (default false)
+boolean isConstrainAnalogValue = true;   // use constraints to limit the analog value?
+float analogMinDefault = 70.0;           // default minimum of the analog range
+float analogMin = analogMinDefault;      // the minimum expected value from the analog sensor (28 observed on IR)
+float analogMaxDefault = 600.0;          // default minimum of the analog range
+float analogMax = analogMaxDefault;      // the maximum expected value from the analog sensor (685 observed on IR)
 
 // variables .....................................
 ArduinoQueue<byte> inputQueue(2);
 ArduinoQueue<byte> outputQueue(2);
-char buf[100];
-int pinAssignments[32] = {}; // how the pin is assigned
-int pinValues[32] = {};      // the value of the pin (if it's an input pin)
-long loopCount      = 0; // number of times loop() has been called
-long requestCount   = 0; // number of times request has been called (actually, when queue is emptied)
+int pinAssignments[32] = {};             // how the pin is assigned
+int pinValues[32] = {};                  // the value of the pin (if it's an input pin)
+long loopCount      = 0;                 // number of times loop() has been called
+long requestCount   = 0;                 // number of times request has been called (actually, when queue is emptied)
+char buf[100];                           // used by sprintf
 
 // functions ...................................................................
 
@@ -189,7 +199,7 @@ void readPinAssignments() {
             pinValues[pin] = digitalValue;
             sprintf(buf, "pin %2d : INPUT;       \tvalue: %4d", pin, digitalValue);
         } else if (pinType ==  PIN_INPUT_ANALOG ) {
-            int analogValue = analogRead(pinIrAnalog);
+            int analogValue = analogRead(pin);
             adjustAutoRange(analogValue);
             pinValues[pin] = analogValue;
             sprintf(buf, "pin %2d : INPUT_ANALOG;\tvalue: %4d", pin, analogValue);
@@ -200,9 +210,9 @@ void readPinAssignments() {
         } else if (pinType ==  PIN_OUTPUT ) {
             int outputValue =  pinValues[pin];
             if ( outputValue == 0 ) {
-                digitalWrite(pinLED, LOW);
+                digitalWrite(pin, LOW);
             } else {
-                digitalWrite(pinLED, HIGH);
+                digitalWrite(pin, HIGH);
             }
             sprintf(buf, "pin %2d : OUTPUT;      \tvalue: %4d", pin, outputValue);
         } else if (pinType ==  PIN_UNUSED ) {
@@ -271,81 +281,90 @@ void displayPinAssignments() {
       240-255:    error values
 */
 int handleCommand( int data ) {
-    if ( data >= 0 && data < 32 ) { //           0-31:     return the output data for that pin assignment, -1 if the pin is not assigned
-        return getOutputData(data);
-    } else if ( inRange(data, 32, 64) ) { //     32-63:    set the pin (n-32) as an PIN_INPUT_DIGITAL pin, return pin number
+    if ( data >= 0 && data < 32 ) { // 0-31:  return the output data for that pin assignment, -1 if the pin is not assigned
+        return getValueOf(data);
+    } else if ( inRange(data, 32, 64) ) { //              32-63:  set the pin (n-32) as an PIN_INPUT_DIGITAL pin, return pin number
         int pin = data - 32;
         setPinAssignment(pin, PIN_INPUT_DIGITAL);
         return pin;
-    } else if ( inRange(data, 64, 96) ) { //     64-95:    set the pin (n-64) as an PIN_INPUT_DIGITAL_PULLUP pin, return pin number
+    } else if ( inRange(data, 64, 96) ) { //              64-95:  set the pin (n-64) as an PIN_INPUT_DIGITAL_PULLUP pin, return pin number
         int pin = data - 64;
         setPinAssignment(pin, PIN_INPUT_DIGITAL_PULLUP);
         return pin;
-    } else if ( inRange(data, 96, 128) ) { //    64-95:    set the pin (n-64) as an PIN_INPUT_ANALOG pin, return pin number
+    } else if ( inRange(data, 96, 128) ) { //             64-95:  set the pin (n-64) as an PIN_INPUT_ANALOG pin, return pin number
         int pin = data - 96;
         setPinAssignment(pin, PIN_INPUT_ANALOG);
         return pin;
-    } else if ( inRange(data, 128, 160)  ) { //  128-159:  set the pin (n-96) as an OUTPUT pin, return pin number
+    } else if ( inRange(data, 128, 160)  ) { //         128-159:  set the pin (n-96) as an OUTPUT pin, return pin number
         int pin = data - 128;
         setPinAssignment(pin, PIN_OUTPUT);
         return pin;
-    } else if ( inRange(data, 160, 192) ) { //   160-191:  write output for pin (n-160) to LOW, return 0
+    } else if ( inRange(data, 160, 192) ) { //          160-191:  write output for pin (n-160) to LOW, return 0
         int pin = data - 160;
         digitalWrite(pin, LOW);
         return 0;
-    } else if ( inRange(data, 192, 224) ) { //   192-223:  write output for pin (n-192) to HIGH, return 1
+    } else if ( inRange(data, 192, 224) ) { //          192-223:  write output for pin (n-192) to HIGH, return 1
         int pin = data - 192;
         digitalWrite(pin, HIGH);
         return 1;
-    } else if ( data == 224 ) { //               224:      echo input
+    } else if ( data == CMD_ECHO_INPUT ) { //           224:      echo input
         return data;
-    } else if ( data ==  225 ) { //              225:      zero request count, return 0
+    } else if ( data == CMD_CLEAR_REQUEST_COUNT ) { //  225:      clear request count, return 0
         requestCount = 0;
         return requestCount;
-    } else if ( data ==  226 ) { //              226:      return request count
+    } else if ( data == CMD_RETURN_REQUEST_COUNT ) { // 226:      return request count
         return requestCount;
-    } else if ( data ==  227 ) { //              227:      zero loop count, return 0
+    } else if ( data == CMD_CLEAR_LOOP_COUNT ) { //     227:      clear loop count, return 0
         loopCount = 0;
         return loopCount;
-    } else if ( data ==  228 ) { //              228:      return loop count
+    } else if ( data == CMD_RETURN_LOOP_COUNT ) { //    228:      return loop count
         return loopCount;
-    } else if ( data == 229 ) { //               229:      clear queues, return 0
+    } else if ( data == CMD_CLEAR_QUEUES ) { //         229:      clear queues, return 0
         clearInputQueue();
         clearOutputQueue();
         return 0;
-    } else if ( data ==  230 ) { //              230:      return IR analog minimum range
-        return irAnalogMin;
-    } else if ( data ==  231 ) { //              231:      return IR analog maximum range
-        return irAnalogMax;
-    } else if ( data ==  232 ) { //              232:      disable auto-ranging, return 0
-        autoRange  = false;
+    } else if ( data == CMD_RETURN_ANALOG_MIN_RANGE ) { //  230:  return analog minimum range
+        return analogMin;
+    } else if ( data == CMD_RETURN_ANALOG_MAX_RANGE ) { //  231:  return analog maximum range
+        return analogMax;
+    } else if ( data == CMD_DISABLE_AUTORANGE ) { //    232:      disable auto-ranging, return 0
+        isAutoRange  = false;
         resetRange();
         return 0;
-    } else if ( data ==  233 ) { //              233:      enable auto-ranging, return 1
-        autoRange  = true;
+    } else if ( data == CMD_ENABLE_AUTORANGE ) { //     233:      enable auto-ranging, return 1
+        isAutoRange  = true;
         resetRange();
         return 1;
-    } else if ( data >= 240 ) { //               240-255:  error values
+    } else if ( data >= 240 ) { //                  240-255:      error values
         return data;
-    } else { //                                  ELSE:     unrecognised command error
+    } else { //                                        else:      unrecognised command error
         return UNRECOGNISED_COMMAND;
     }
 }
 
 /*
-    If the pin is any kind of input pin, return its value, otherwise PIN_ASSIGNED_INPUT (an error value).
-    IF the pin is assigned as an analog pin its value may exceed the one byte limit, so its value is
-    either fix- or auto-range constrained to fit within 0 and 255.
+    If the pin is any kind of input pin, return its value, otherwise PIN_ASSIGNED_AS_OUTPUT
+    (an error value).
+
+    If the pin is assigned as an analog pin its value may exceed the one byte limit. If the
+    isConstrainAnalogValue flag is true its value will be either fixed-range or auto-range
+    constrained to fit within 0 and 255.
 */
-int getOutputData( int pin ) {
+int getValueOf( int pin ) {
     if ( pinAssignments[pin] == PIN_INPUT_DIGITAL
             || pinAssignments[pin] == PIN_INPUT_DIGITAL_PULLUP ) {
         return pinValues[pin]; // return the output data for the pin
     } else if ( pinAssignments[pin] == PIN_INPUT_ANALOG ) {
-        // constrain values (which go up to about 685 on a Sharp IR sensor) within a 0-255 range
-        return constrainAnalogValue(pinValues[pin]);
+        if ( isConstrainAnalogValue ) {
+            // constrain values (which go up to about 685 on a Sharp IR sensor) within a 0-255 range
+            return constrainAnalogValue(pinValues[pin]);
+        } else {
+            return pinValues[pin];
+        }
+    } else if ( pinAssignments[pin] == PIN_UNUSED ) {
+        return PIN_UNASSIGNED;
     } else {
-        return PIN_ASSIGNED_INPUT;
+        return PIN_ASSIGNED_AS_OUTPUT;
     }
 }
 
@@ -433,11 +452,11 @@ void clearOutputQueue() {
     This uses either a manually set range or auto-ranging if enabled.
 */
 int constrainAnalogValue( int value ) {
-    return constrain( (( value - irAnalogMin ) / ( irAnalogMax )) * 255.0 , 0, 255 );
+    return constrain( (( value - analogMin ) / ( analogMax )) * 255.0 , 0, 255 );
 }
 
 /**
-    The minimum and maximum values are either fixed (when 'autoRange' is
+    The minimum and maximum values are either fixed (when 'isAutoRange' is
     false) or dynamically adjusted based on observed values. Fixing the
     values will necessarily also limit the range of the returned values,
     reflecting limitations in, for example, the measured physical distance.
@@ -450,9 +469,9 @@ int constrainAnalogValue( int value ) {
     actually is ("objects in mirror are closer than they appear").
 */
 void adjustAutoRange( int rawAnalogValue ) {
-    if ( autoRange ) { // then auto-adjust range
-        irAnalogMin = min(irAnalogMin, rawAnalogValue);
-        irAnalogMax = max(irAnalogMax, rawAnalogValue);
+    if ( isAutoRange ) { // then auto-adjust range
+        analogMin = min(analogMin, rawAnalogValue);
+        analogMax = max(analogMax, rawAnalogValue);
     }
 }
 
@@ -460,8 +479,8 @@ void adjustAutoRange( int rawAnalogValue ) {
     Reset the auto-range values to their defaults.
 */
 void resetRange() {
-    irAnalogMin = irAnalogMinDefault;
-    irAnalogMax = irAnalogMaxDefault;
+    analogMin = analogMinDefault;
+    analogMax = analogMaxDefault;
 }
 
 /**
