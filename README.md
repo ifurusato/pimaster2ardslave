@@ -37,10 +37,10 @@ master; there is no synchronisation.
 
 ## Status
 
-At the time of this writing the project is less than a week old, and is not yet 
-entirely functional, but the basic communication works. The test class includes
-three tests (test_echo, test_blink_led and test_configuration) that function
-and interact with hardware in expected ways.
+At the time of this writing the project is less than a week old, and is largely
+functional, with the basic communication between the Raspberry Pi and Arduino
+working. The repository currently includes three tests (test_echo, test_blink_led 
+and test_config) that function and interact with hardware in expected ways.
 
 The project is being exposed publicly so that those interested can follow its 
 progress. When things stabilise we'll update this status section.

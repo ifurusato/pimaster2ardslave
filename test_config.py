@@ -28,7 +28,7 @@ def main():
         if _master is not None: 
 
             # set it to some very large number if you want it to go on for a long time...
-            _loop_count = 10
+            _loop_count = 100
             _master.test_configuration(_loop_count) # see documentation for hardware configuration
 
         else:
