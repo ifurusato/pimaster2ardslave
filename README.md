@@ -25,7 +25,12 @@ The `requestData()` call empties the queue, so for every `receiveData()` call th
 
 ## Status
 
-At the time of this writing the project is less than a week old, and is largely functional, with the basic communication between the Raspberry Pi and Arduino working. The repository currently includes three tests (test_echo, test_blink_led and test_config) that function and interact with hardware in expected ways.
+At the time of this writing the project is less than a week old, and is largely functional, with the basic communication between the Raspberry Pi and Arduino working. The repository currently includes three tests that function and interact with hardware in expected ways.
+
+* `test_echo.py`:   this tests that the Raspberry Pi and Arduino can talk to each other, and doesn't require any sensors or additional hardware other than the I²C between the two boards. Communication is over address 0x08, so be sure that is not being used by another device. For the test to function be sure to set the 'isEchoTest' flag on the Arduino's i2cSlave.ino sketch to true, otherwise it won't echo the requests but rather respond to them.
+* `test_blink.py`:  this test blinks an LED connected to pin 5 of the Arduino. This requires a Raspberry Pi connected to an Arduino over I²C on address 0x08. Because an LED cannot directly handle a 5 volt supply you should connect the LED to ground through a resistor of about 330 ohms. The exact value will depend on the dropping voltage of the LED (which varies) and how bright you want it to appear.  
+* `test_config.py`: this tests a hardware configuration of one button, one LED, two digital and one analog infrared sensors, first configuring the Arduino and then performing a communications loop.
+
 
 The project is being exposed publicly so that those interested can follow its progress. When things stabilise we'll update this status section.
 

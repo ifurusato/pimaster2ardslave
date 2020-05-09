@@ -9,6 +9,10 @@
 # created:  2020-04-30
 # modified: 2020-05-04
 #
+# This tests a hardware configuration of one button, one LED, two digital
+# and one analog infrared sensors, first configuring the Arduino and then
+# performing a communications loop.
+#
 # This requires installation of pigpio, e.g.:
 #
 #   % sudo pip3 install pigpio
